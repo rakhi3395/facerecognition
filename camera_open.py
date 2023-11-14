@@ -209,7 +209,16 @@ class CameraApp:
             if emp_data[0] == int(emp_id):
                 return emp_data
         return None
-        
+    def filter_roi_faces(self, target_objs, roi_x, roi_y, roi_width, roi_height):
+        filtered_faces = []
+        for target_obj in target_objs:
+            face_area = target_obj['facial_area']
+            x,y,w,h = face_area['x'], face_area['y'], face_area['w'], face_area['h']
+            if roi_x <= x and x + w <= roi_x + roi_width and roi_y <= y and y + h <= roi_y + roi_height:
+                filtered_faces.append(target_obj)
+        return filtered_faces
+
+
     def open_camera(self):
         # DeepFace.stream(db_path = "data")
         # Get the selected camera name from the listbox
@@ -223,13 +232,13 @@ class CameraApp:
         if camera_ip=="0":
             camera_ip=0
         camera_ip = "Full Video_ Deewangi Deewangi _  Om Shanti Om _ Shahrukh Khan _ Vishal Dadlani, Shekhar Ravjiani.mp4"
-        camera_ip = "b.mp4"
+        camera_ip = 0
         cap = cv2.VideoCapture(camera_ip)
         # cap.set(cv2.CAP_PROP_FPS, 50)
         is_mark_attendance = False
         previous_id = -1
         # Define the ROI (Region of Interest) boundaries
-        roi_x, roi_y, roi_width, roi_height = 100, 100, 700, 500
+        roi_x, roi_y, roi_width, roi_height = 500, 0, 600, 800
         actual_fps = cap.get(cv2.CAP_PROP_FPS)
         print("Actual FPS of the video:", actual_fps)
         desired_fps = actual_fps
@@ -240,6 +249,7 @@ class CameraApp:
             rgb_frame = img[:, :, ::-1]
             # features = self.faceCascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=10)
             # print(rgb_frame)
+            cv2.rectangle(img, (roi_x, roi_y), (roi_x + roi_width, roi_y + roi_height), (0, 0, 255), 1)  # Draw green rectangle on the face
             if frame_count%5==0:
                 # detected_faces = DeepFace.find(
                 #     img_path=rgb_frame,
@@ -255,6 +265,7 @@ class CameraApp:
                         detector_backend = self.detector_backend,
                         enforce_detection=False,
                 )
+                target_objs = self.filter_roi_faces(target_objs, roi_x, roi_y, roi_width, roi_height)
                 for target_obj in target_objs:
                     # Check if the face coordinates are within the ROI
                     target_region = target_obj['facial_area']
