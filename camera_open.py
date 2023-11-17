@@ -231,14 +231,14 @@ class CameraApp:
         # check if local camera
         if camera_ip=="0":
             camera_ip=0
-        camera_ip = "Full Video_ Deewangi Deewangi _  Om Shanti Om _ Shahrukh Khan _ Vishal Dadlani, Shekhar Ravjiani.mp4"
-        camera_ip = 0
+        camera_ip = "test_video.mp4"
+        # camera_ip = 0
         cap = cv2.VideoCapture(camera_ip)
         # cap.set(cv2.CAP_PROP_FPS, 50)
         is_mark_attendance = False
         previous_id = -1
         # Define the ROI (Region of Interest) boundaries
-        roi_x, roi_y, roi_width, roi_height = 500, 0, 600, 800
+        roi_x, roi_y, roi_width, roi_height = 500, 92, 600, 550
         actual_fps = cap.get(cv2.CAP_PROP_FPS)
         print("Actual FPS of the video:", actual_fps)
         desired_fps = actual_fps
@@ -246,11 +246,15 @@ class CameraApp:
         while True:
             start_time = time.time()
             ret, img = cap.read()
-            rgb_frame = img[:, :, ::-1]
+            roi = img[roi_y:roi_y + roi_height, roi_x:roi_x + roi_width]
+
+            # Resize the ROI
+            # resized_roi = cv2.resize(roi, (new_width, new_height))
+            rgb_frame = roi[:, :, ::-1]
             # features = self.faceCascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=10)
             # print(rgb_frame)
             cv2.rectangle(img, (roi_x, roi_y), (roi_x + roi_width, roi_y + roi_height), (0, 0, 255), 1)  # Draw green rectangle on the face
-            if frame_count%5==0:
+            if frame_count%3==0:
                 # detected_faces = DeepFace.find(
                 #     img_path=rgb_frame,
                 #     db_path="data",
@@ -265,15 +269,16 @@ class CameraApp:
                         detector_backend = self.detector_backend,
                         enforce_detection=False,
                 )
-                target_objs = self.filter_roi_faces(target_objs, roi_x, roi_y, roi_width, roi_height)
+                # print(target_objs)
+                # target_objs = self.filter_roi_faces(target_objs, roi_x, roi_y, roi_width, roi_height)
                 for target_obj in target_objs:
                     # Check if the face coordinates are within the ROI
                     target_region = target_obj['facial_area']
                     target_confidence = target_obj['confidence']
 
-                    print("face_confidence:",target_confidence)
+                    # print("face_confidence:",target_confidence)
 
-                    if target_confidence<5:
+                    if target_confidence<10:
                         continue
                     target_representation = self.create_representations(target_obj['face'])
 
@@ -318,7 +323,7 @@ class CameraApp:
                         x, y, w, h = face['source_x'][0],face['source_y'][0],face['source_w'][0],face['source_h'][0]
                         confidence_score = face['Facenet512_euclidean_l2'][0]
                         predicted_class = face['identity'][0]
-                        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 3) 
+                        
                         # if confidence > 0.5:  # Adjust the threshold as needed
                         # if roi_x <= x and x + w <= roi_x + roi_width and roi_y <= y and y + h <= roi_y + roi_height:
                             # cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 3)  # Draw green rectangle on the face
@@ -326,7 +331,7 @@ class CameraApp:
                             # print("predicted_class:",predicted_class)
                             # print("confidence_score:",confidence_score)
                             # Compare the detected face embeddings with known face embeddings
-                        if confidence_score > 0.1 : 
+                        if confidence_score > 0.9 : 
                             emp_id = predicted_class                  
                             matched_data = self.get_matched_data(emp_id)
                             print("matched_data:", matched_data)
@@ -337,37 +342,41 @@ class CameraApp:
                                     # print("matched_data:", matched_data[0])
                             
                             if matched_data is not None:
+                                cv2.rectangle(roi, (x, y), (x + w, y + h), (0, 255, 0), 3) 
                                 # print("is_mark_attendance:",is_mark_attendance)
                                 emp_id, email_id, name, dep = matched_data[0], matched_data[1], matched_data[2], matched_data[3]
-                                cv2.putText(img, f"emp_id:{emp_id}", (x, y-75), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
+                                cv2.putText(roi, f"emp_id:{emp_id}", (x, y-75), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
                                 # cv2.putText(img, f"email_id:{email_id}", (x, y-55), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
-                                cv2.putText(img, f"name:{name}", (x, y-30), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
+                                cv2.putText(roi, f"name:{name}", (x, y-30), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
                                 # cv2.putText(img, f"department:{dep}", (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
                                 if not is_mark_attendance:
                                     self.mark_attendance(emp_id, email_id, name, dep)
                                     is_mark_attendance = True
-                        else:
-                            # print("predicted_class:",predicted_class)
-                            # print("confidence_score:",confidence_score)
-                            cv2.rectangle(img, (x, y), (x+w, y+h), (0, 0, 255), 3)
-                            cv2.putText(img, "Unknown Face", (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
-                            is_mark_attendance = False
-                    else:
-                        # print("predicted_class:",predicted_class)
+                        # else:
+                        #     # print("predicted_class:",predicted_class)
+                        #     # print("confidence_score:",confidence_score)
+                        #     cv2.rectangle(roi, (x, y), (x+w, y+h), (0, 0, 255), 3)
+                        #     cv2.putText(roi, "Unknown Face", (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
+                        #     is_mark_attendance = False
+                    # else:
+                    #     # print("predicted_class:",predicted_class)
                         
-                        face_area = target_obj['facial_area']
-                        # print("face_area:",face_area)
-                        if target_obj["confidence"]>5:
-                            # print("unknown face detected")
-                            x,y,w,h = face_area['x'], face_area['y'], face_area['w'], face_area['h']
-                            cv2.rectangle(img, (x, y), (x+w, y+h), (0, 0, 255), 3)
-                            cv2.putText(img, "Unknown Face", (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
-                            is_mark_attendance = False
+                    #     face_area = target_obj['facial_area']
+                        
+                    #     if target_obj["confidence"]>10:
+                    #         print("face_area:",face_area)
+                    #         print("face_confidence:",target_obj["confidence"])
+                    #         # print("unknown face detected")
+                    #         x,y,w,h = face_area['x'], face_area['y'], face_area['w'], face_area['h']
+                    #         cv2.rectangle(roi, (x, y), (x+w, y+h), (0, 0, 255), 3)
+                    #         cv2.putText(roi, "Unknown Face", (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 3)
+                    #         is_mark_attendance = False
 
                         
                 # # Draw a red rectangle around the ROI
                 # # cv2.rectangle(img, (roi_x, roi_y), (roi_x + roi_width, roi_y + roi_height), (0, 0, 255), 3)
-
+                # Display the region of interest (ROI)
+                # cv2.imshow("ROI", roi)
                 cv2.imshow("Welcome To Face Recognition", img)
                 processing_time = time.time() - start_time
                 print("Processing Time:", processing_time)
